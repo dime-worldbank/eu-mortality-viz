@@ -1,6 +1,7 @@
 # Generated image output
 output/**/*.jpg
 output/*.gif
+!output/EU Excess Mortality 2020.gif
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

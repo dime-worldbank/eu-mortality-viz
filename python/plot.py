@@ -1,5 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
+# MAGIC # Excess Mortality in EU Pre, During, and Post-COVID
+# MAGIC Map visualization in Python using public datasets on local mortality levels across the EU pre-, during, and post-COVID.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Environment and Data Preparation
 # MAGIC Install additional dependencies and import libraries
 
 # COMMAND ----------
@@ -17,7 +24,7 @@ import matplotlib.pyplot as plt
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Read shapefile that contains EU country and subnational geometry data, identified by `NUTS_ID`
+# MAGIC Read the shapefile that contains EU country and subnational geometry data, identified by `NUTS_ID`
 
 # COMMAND ----------
 
@@ -29,7 +36,7 @@ nuts_all
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Read mortality data file that contains location identifiers `nuts_id`
+# MAGIC Read the mortality data file that contains location identifiers `nuts_id`
 
 # COMMAND ----------
 
@@ -70,9 +77,20 @@ mortality_w_geo
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Static Map Visualization
+# MAGIC Pick a random period to visualize excess mortality measured using relative deaths on a map. Start with a basic `plot` command, specifying a color map and displaying legend.
+
+# COMMAND ----------
+
 sample_period = '2020_50'
 mortality_2020_w50 = mortality_w_geo[mortality_w_geo.time_period == sample_period]
 mortality_2020_w50.plot(column='deaths_rel_scaled', cmap='Spectral_r', legend=True)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Zoom in and rid off the axis
 
 # COMMAND ----------
 
@@ -88,8 +106,18 @@ mortality_2020_w50.plot(column='deaths_rel_scaled', cmap='Spectral_r', legend=Tr
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC Surprising that during the height of the pandemic we don't see red. Maybe it's a value color coding issue. Quickly check the distribution of relative deaths.
+
+# COMMAND ----------
+
 # check distribution of relative deaths
 plt.hist(mortality_2020_w50.deaths_rel_scaled)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Cap the color coding at 200 max, which corresponds to 2x the baseline deaths. This covers a good % of data points and better shows variation and contrast (also because Robert says so). Then, overlay country boundaries for visual grouping of national trends.
 
 # COMMAND ----------
 
@@ -98,12 +126,17 @@ ax.set_xlim([2511158,  6011158])
 ax.set_ylim([1381228,  5395358])
 ax.set_axis_off()
 
-# cap max value used for plotting to visualize variation & contract
+# cap max value used for plotting to visualize variation & contrast
 mortality_2020_w50.plot(column='deaths_rel_scaled', cmap='Spectral_r', legend=True, ax=ax, vmin=0, vmax=200)
 
 # overlay country boundaries
 countries = nuts_all[nuts_all["LEVL_CODE"] == 0]
 countries.geometry.boundary.plot(ax=ax, color=None, edgecolor='k', linewidth=0.7)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Additional costmetic settings to make it look like Robert's map: reposition legend at the bottom, set a title and captions.
 
 # COMMAND ----------
 
@@ -137,24 +170,11 @@ txt._get_wrap_line_width = lambda : 400 # hack only necessary for displaying the
 
 # COMMAND ----------
 
-# Bonus: interactive map!
-mortality_2020_w50.explore(
-    column="deaths_rel_scaled",
-    vmax=200,
-    cmap="Spectral_r", 
-    tooltip="deaths_rel_scaled",
-    popup=True,  # show all values on click
-)
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Animated Map
-# MAGIC Let's add the time dimension to the map visualization
+# MAGIC Let's add the time dimension to the map visualization, starting with packaging the above visualization step as a function that takes the time_period as an argument.
 
 # COMMAND ----------
-
-# Package the above viz steps into a function
 
 caption = '''Notes: Values calculated relative to 2015-2018 average (=100) and shown at NUTS3 level or, if unavailable, the closest most disaggregated level.\n\nData sources: European Commission, Eurostat, 'Deaths by week, sex and NUTS 3 region' (mortality data); European Commission – Eurostat/GISCO (NUTS-3 shapefiles)'''
 
@@ -210,9 +230,10 @@ fig.show()
 # COMMAND ----------
 
 from tqdm import tqdm # for displaying progress
+from glob import glob
 
-# clear all jpg files
-# for f in glob(os.path.join('output', '*.jpg')):
+# # clear all jpg files
+# for f in tqdm(glob(os.path.join('output', '*.jpg'))):
 #     os.remove(f)
 
 unique_time_periods = mortality_w_geo.time_period.unique()
@@ -220,7 +241,7 @@ for time_period in tqdm(unique_time_periods):
     fig = plot_map(time_period)
     year, week = time_period.split('_')
     # zero pad week so simple filename sort is chronological
-    filename = os.path.join('output', f'{year}_{week.zfill(2)}.jpg')
+    filename = os.path.join('output', 'week', f'{year}_{week.zfill(2)}.jpg')
     fig.savefig(filename, dpi=150)
     plt.close(fig) 
 
@@ -232,21 +253,55 @@ for time_period in tqdm(unique_time_periods):
 # COMMAND ----------
 
 from PIL import Image
-from glob import glob
 
-GIF_FILENAME = os.path.join('output', "0 EU Excess Mortality 2020-2023.gif")
+def combine_to_gif(input_filenames, output_filename, compress=True):
+    images = []
+    for filename in tqdm(input_filenames):
+        img = Image.open(filename)
+        if compress:
+            img = img.resize((500, 750)) 
+        images.append(img)
 
-sorted_files = sorted(glob(os.path.join('output', '*.jpg')))
-images = []
-for filename in tqdm(sorted_files):
-    img = Image.open(filename)
-    resized = img.resize((500, 750)) 
-    images.append(resized)
+    images[0].save(
+        output_filename,
+        save_all=True, 
+        append_images=images[1:], 
+        duration=100, 
+        loop=1
+    )
 
-images[0].save(
-    GIF_FILENAME,
-    save_all=True, 
-    append_images=images[1:], 
-    duration=600, 
-    loop=1
+gif_filename = os.path.join('output', "EU Excess Mortality 2020-2023.gif")
+sorted_files = sorted(glob(os.path.join('output', 'week', '*.jpg')))
+combine_to_gif(sorted_files, gif_filename)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Only aminate all weeks of 2020, with higher resolution image for each frame
+
+# COMMAND ----------
+
+gif_filename = os.path.join('output', "EU Excess Mortality 2020.gif")
+sorted_files = sorted(glob(os.path.join('output', 'week', '2020_*.jpg')))
+combine_to_gif(sorted_files, gif_filename, compress=False)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC <img src="/files/Workspace/Repos/wlu4@worldbank.org/eu-mortality-viz/python/output/EU Excess Mortality 2020.gif" width=800 />
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Bonus: Interactive Map
+# MAGIC Just because ;)
+
+# COMMAND ----------
+
+mortality_2020_w50.explore(
+    column="deaths_rel_scaled",
+    vmax=200,
+    cmap="Spectral_r", 
+    tooltip="deaths_rel_scaled",
+    popup=True,  # show all values on click
 )
