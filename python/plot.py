@@ -267,7 +267,7 @@ def combine_to_gif(input_filenames, output_filename, compress=True):
         save_all=True, 
         append_images=images[1:], 
         duration=100, 
-        loop=1
+        loop=0 # 0 means loop forever
     )
 
 gif_filename = os.path.join('output', "EU Excess Mortality 2020-2023.gif")
@@ -288,7 +288,7 @@ combine_to_gif(sorted_files, gif_filename, compress=False)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC <img src="/files/Workspace/Repos/wlu4@worldbank.org/eu-mortality-viz/python/output/EU Excess Mortality 2020.gif" width=800 />
+# MAGIC <img src="https://github.com/weilu/eu-mortality-viz/blob/main/python/output/EU%20Excess%20Mortality%202020.gif?raw=true" width=500/>
 
 # COMMAND ----------
 
