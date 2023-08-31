@@ -63,13 +63,13 @@ mortality = left_join(mortality,
 mortality$geometry = st_geometry(mortality$geometry)
 mortality = st_as_sf(mortality)
 
+
 ### Order
 mortality = mortality[order(mortality$year, mortality$week),]
 
 ### Plot
 
-# var1 = '2020-12'
-
+var1 = '2020_12'
 
 count = 1000
 for(var1 in unique(mortality$time_period)){
@@ -81,6 +81,7 @@ for(var1 in unique(mortality$time_period)){
   # Control the loop
   print(var1)
   count = count+1
+  
   
   # Leave only the week in question
   dta_plot = mortality %>% filter(time_period == var1)
@@ -97,12 +98,12 @@ for(var1 in unique(mortality$time_period)){
             linewidth = .1, col = 'grey60')+
     
     # Define color bar
-    scale_fill_distiller(na.value = "darkred",
-                         name = '<b>Relative mortality</b> (<i>2015-18 average = 100</i>)',
+    scale_fill_distiller(name = '<b>Relative mortality</b> (<i>2015-18 average = 100</i>)',
                          palette='Spectral',
                          guide="colorbar",
                          breaks = seq(0,200, 50),
-                         limits = c(0,200))+
+                         limits = c(0,200),
+                         na.value = "darkred")+
     
     # Plot another spatial (sf) object (country borders)
     geom_sf(data = nuts0, linewidth = .7, col = 'black',
@@ -154,6 +155,7 @@ for(var1 in unique(mortality$time_period)){
       plot.caption = element_textbox_simple(size = 13, family = 'Calibiri')
     )
   
+  g1
   
   ggsave(file.path(main_dir, 'Figures (present)', 'Individual',  paste0(count,'_excess_mortality_', var1,'.png')),
          plot = g1, width = 29, height = 39, unit = 'cm')
@@ -161,9 +163,13 @@ for(var1 in unique(mortality$time_period)){
 }
 
 
+
 #
 # GIF ----
 #
+
+library(magick)
+
 
 img <- image_blank(width = 800, height = 800)
 
@@ -174,8 +180,8 @@ for(file1 in files1){
   img = c(img, image_read(file.path(main_dir, 'Figures (present)', 'Individual', file1)))
 }
 
-
 my.animation<-image_animate(image_scale(img, "800x800"), fps = 10, dispose = "previous")
+
 image_write(path  = file.path(main_dir, 'Figures (present)',  paste0('Excess_mortality (2020) [1_10sec)','.gif')),
             image = my.animation)
 

@@ -3,6 +3,7 @@
 # SET-UP ----
 #
 
+# rm(list=ls())
 
 ### Copy of the file
 file.copy(rstudioapi::getSourceEditorContext()$path,
@@ -16,9 +17,9 @@ if( !is.element("pacman", installed.packages() )){
   install.packages("pacman", dep= T)
 }
 
-pacman::p_load(tidyverse, haven, stringr, paletteer,
-               janitor, data.table, ggplot2, stringi, dplyr,
-               sf, paletteer, data.table, beepr, lubridate, xlsx,
+pacman::p_load(tidyverse, haven,
+               janitor, data.table, ggplot2, dplyr,
+               sf, lubridate, xlsx,
                patchwork, ggtext, ggthemes, extrafont,
                tidylog, gganimate, transformr, magick,
                update = F)
@@ -38,41 +39,6 @@ pr          <- function(x){return(prop.table(table(x, useNA = "no"))*100)}
 
 ### Directory
 main_dir = '~/Moje/Maps/Europe mortality (weekly, NUTS3)'
-
-
-
-#
-# SHAPEFILE ----
-#
-
-### Read NUTS shapefiles
-nuts_all = read_sf(file.path(main_dir, 'Data', 'NUTS_shapefile', 'NUTS_RG_03M_2021_3035.shp'))
-
-### Extract
-nuts0 = nuts_all[nuts_all$LEVL_CODE == 0, ] # Countries
-nuts1 = nuts_all[nuts_all$LEVL_CODE == 1, ] # NUTS1 only
-nuts2 = nuts_all[nuts_all$LEVL_CODE == 2, ] # NUTS2 only
-nuts3 = nuts_all[nuts_all$LEVL_CODE == 3, ] # NUTS3 only
-
-
-# Remove countries we don't have data for
-nuts0 = nuts0 %>% filter(!grepl('TR', CNTR_CODE))
-nuts3 = nuts3 %>% filter(!grepl('TR', CNTR_CODE))
-
-
-
-### Plot empty map to test
-# ggplot() +  
-#   geom_sf(data = nuts3, linewidth = .2, col = 'grey80', fill = NA) +
-#   geom_sf(data = nuts0, linewidth = 0.6, col = 'black', fill = NA) +
-#   scale_x_continuous(limits = c(2511158,
-#                                 6011158))+
-#   scale_y_continuous(limits = c(1381228,
-#                                 5395358  )) +
-#   theme_void()
-
-
-
 
 
 #
@@ -102,7 +68,7 @@ mortality = mortality %>%
                   filter(week >= 1 & week <= 53 & year >= 2015 & year <= 2023)
 
 
-### Calculate 2015-2018 averag
+### Calculate 2015-2018 average
 temp = mortality %>% 
           filter(year %in% c(2015:2018)) %>% 
           group_by(geo, week) %>% 
@@ -115,7 +81,8 @@ mortality = left_join(mortality, temp)
 
 
 # Remove those with non-positive values
-mortality = mortality %>% filter(av_15_18 > 0)
+mortality = mortality %>% filter(av_15_18 >= 0)
+
 
 ### Calculate relative values
 mortality$obs_rel = mortality$obs_value / mortality$av_15_18
@@ -125,7 +92,43 @@ mortality = mortality %>%  filter(year >= 2019)
 
 
 
-### Merge with shapefiles ----
+#
+# SHAPEFILE ----
+#
+
+### Read NUTS shapefiles
+nuts_all = read_sf(file.path(main_dir, 'Data', 'NUTS_shapefile', 'NUTS_RG_03M_2021_3035.shp'))
+
+
+### Extract
+nuts0 = nuts_all[nuts_all$LEVL_CODE == 0, ] # Countries
+nuts1 = nuts_all[nuts_all$LEVL_CODE == 1, ] # NUTS1 only
+nuts2 = nuts_all[nuts_all$LEVL_CODE == 2, ] # NUTS2 only
+nuts3 = nuts_all[nuts_all$LEVL_CODE == 3, ] # NUTS3 only
+
+
+
+# Remove countries we don't have data for
+nuts0 = nuts0 %>% filter(!grepl('TR', CNTR_CODE))
+nuts3 = nuts3 %>% filter(!grepl('TR', CNTR_CODE))
+
+
+
+### Plot empty map to test
+ggplot() +
+  geom_sf(data = nuts3, linewidth = 0.2, col = 'grey80', fill = NA) +
+  geom_sf(data = nuts0, linewidth = 0.6, col = 'black', fill = NA) +
+  scale_x_continuous(limits = c(2511158,
+                                6011158))+
+  scale_y_continuous(limits = c(1381228,
+                                5395358 )) +
+  theme_void()
+
+
+
+
+
+### Merge mortatlity data with shapefiles ----
 mortality = left_join(mortality %>% rename('NUTS_ID' = 'geo'),
                   nuts_all) %>%
           filter(!is.na(CNTR_CODE))
