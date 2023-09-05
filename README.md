@@ -2,6 +2,11 @@
 
 Map visualization in R, Stata, and Python using a shared dataset on local mortality levels across the EU pre-, during, and post-COVID.
 
+## Data Sources
+
+- EU geo boundaries – NUTS shapefiles: https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units/nuts
+- Mortality: https://ec.europa.eu/eurostat/databrowser/view/DEMO_R_MWK3_T/default/table?lang=en
+
 ## Additional WB Resources
 
 - [Geospatial Data in Stata: Using `spmap`](https://osf.io/tcfvb) - DIME Analytics Continuing Education
